@@ -25,13 +25,20 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Accept Android SDK Licenses
-        run: yes | sdkmanager --licenses
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
+          echo "SDKMANAGER=$SDKMANAGER" >> $GITHUB_ENV
+          echo "$(dirname "$SDKMANAGER")" >> $GITHUB_PATH
+
+      - name: Accept Android Licenses
+        run: yes | "$SDKMANAGER" --licenses
 
       - name: Install Android SDK
         run: |
-          sdkmanager "platforms;android-35"
-          sdkmanager "build-tools;35.0.0"
+          "$SDKMANAGER" "platforms;android-35"
+          "$SDKMANAGER" "build-tools;35.0.0"
 
       - name: Build APK
         run: gradle assembleDebug
