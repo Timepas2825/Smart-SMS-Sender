@@ -195,16 +195,45 @@ fun SmartSMSApp() {
 
                         Spacer(Modifier.height(12.dp))
 
-                        Button(
-                            onClick = { notice = "SMS automation is not enabled yet." },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("START") }
+Button(
+    onClick = {
+        notice = "SMS automation is not enabled yet."
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text("START")
+}
 
-                        OutlinedButton(
-                            onClick = { notice = "No active automation to pause." },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("PAUSE") }
+OutlinedButton(
+    onClick = {
+        notice = "No active automation to pause."
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text("PAUSE")
+}
 
-                        OutlinedButton(
-                            onClick = { notice = "No paused automation to resume." },
-                            modifier =
+OutlinedButton(
+    onClick = {
+        notice = "No paused automation to resume."
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text("RESUME")
+}
+
+OutlinedButton(
+    onClick = {
+        notice = "Automation stopped."
+    },
+    modifier = Modifier.fillMaxWidth()
+) {
+    Text("STOP")
+}
+
+Spacer(Modifier.height(16.dp))
+
+Text("Next Scheduled Message", fontWeight = FontWeight.Bold)
+Text("No schedule configured")
+
+Text(notice, color = MaterialTheme.colorScheme.primary)
