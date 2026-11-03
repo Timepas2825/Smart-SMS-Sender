@@ -1,6 +1,7 @@
 package com.smart.smsmanager
 
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -10,80 +11,89 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class Contact(
-    val name: String,
-    val phone: String
-)
+data class Contact(val name: String, val phone: String)
+data class MessageTemplate(val title: String, val content: String)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            SmartSMSApp()
-        }
+        setContent { SmartSMSApp() }
     }
 }
 
 @Composable
 fun SmartSMSApp() {
 
-    val context = LocalContext.current
+    val context = androidx.compose.ui.platform.LocalContext.current
 
-    val preferences = remember {
-        context.getSharedPreferences(
-            "SmartSMSData",
-            android.content.Context.MODE_PRIVATE
-        )
+    val prefs = remember {
+        context.getSharedPreferences("SmartSMSData", Context.MODE_PRIVATE)
     }
 
     val contacts = remember {
         mutableStateListOf<Contact>().apply {
             try {
-                val saved = preferences.getString("contacts", "[]")
-                val array = JSONArray(saved)
-
+                val array = JSONArray(prefs.getString("contacts", "[]"))
                 for (i in 0 until array.length()) {
                     val item = array.getJSONObject(i)
-                    add(
-                        Contact(
-                            item.getString("name"),
-                            item.getString("phone")
-                        )
-                    )
+                    add(Contact(item.getString("name"), item.getString("phone")))
                 }
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) {}
         }
     }
 
-    var selectedTab by remember {
-        mutableStateOf("Dashboard")
+    val templates = remember {
+        mutableStateListOf<MessageTemplate>().apply {
+            try {
+                val array = JSONArray(prefs.getString("templates", "[]"))
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    add(MessageTemplate(item.getString("title"), item.getString("content")))
+                }
+            } catch (_: Exception) {}
+        }
     }
 
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var editingIndex by remember { mutableIntStateOf(-1) }
-    var message by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableStateOf("Dashboard") }
+
+    var contactName by remember { mutableStateOf("") }
+    var contactPhone by remember { mutableStateOf("") }
+    var editingContact by remember { mutableIntStateOf(-1) }
+
+    var templateTitle by remember { mutableStateOf("") }
+    var templateContent by remember { mutableStateOf("") }
+    var editingTemplate by remember { mutableIntStateOf(-1) }
+
+    var selectedContact by remember { mutableIntStateOf(-1) }
+    var selectedTemplate by remember { mutableIntStateOf(-1) }
+
+    var notice by remember { mutableStateOf("") }
 
     fun saveContacts() {
         val array = JSONArray()
-
         contacts.forEach {
-            val item = JSONObject()
-            item.put("name", it.name)
-            item.put("phone", it.phone)
-            array.put(item)
+            array.put(JSONObject().apply {
+                put("name", it.name)
+                put("phone", it.phone)
+            })
         }
+        prefs.edit().putString("contacts", array.toString()).apply()
+    }
 
-        preferences.edit()
-            .putString("contacts", array.toString())
-            .apply()
+    fun saveTemplates() {
+        val array = JSONArray()
+        templates.forEach {
+            array.put(JSONObject().apply {
+                put("title", it.title)
+                put("content", it.content)
+            })
+        }
+        prefs.edit().putString("templates", array.toString()).apply()
     }
 
     MaterialTheme {
@@ -91,9 +101,7 @@ fun SmartSMSApp() {
         Scaffold(
             topBar = {
                 Surface(tonalElevation = 4.dp) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
+                    Column(Modifier.padding(16.dp)) {
                         Text(
                             "Smart SMS Manager",
                             style = MaterialTheme.typography.headlineSmall,
@@ -106,42 +114,52 @@ fun SmartSMSApp() {
         ) { padding ->
 
             Column(
-                modifier = Modifier
+                Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
 
-                Text(
-                    "Manage Application",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                listOf(
-                    "Dashboard",
-                    "Contacts",
-                    "Templates",
-                    "Scheduler",
-                    "History",
-                    "Settings"
-                ).forEach { tab ->
-
-                    OutlinedButton(
-                        onClick = {
-                            selectedTab = tab
-                            message = ""
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(tab)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("Dashboard", "Contacts", "Templates").forEach {
+                        Button(
+                            onClick = {
+                                selectedTab = it
+                                notice = ""
+                            },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(4.dp)
+                        ) {
+                            Text(it)
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("Scheduler", "History", "Settings").forEach {
+                        OutlinedButton(
+                            onClick = {
+                                selectedTab = it
+                                notice = ""
+                            },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(4.dp)
+                        ) {
+                            Text(it)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
 
                 when (selectedTab) {
 
@@ -149,231 +167,44 @@ fun SmartSMSApp() {
 
                         Text(
                             "Dashboard",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        DashboardCard(
-                            "Contacts",
-                            contacts.size.toString(),
-                            Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        DashboardCard(
-                            "Templates",
-                            "0",
-                            Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        DashboardCard(
-                            "Sent Today",
-                            "0",
-                            Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        DashboardCard(
-                            "Pending",
-                            "0",
-                            Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    "Contacts" -> {
-
-                        Text(
-                            "Contact Management",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Contact Name") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = phone,
-                            onValueChange = { phone = it },
-                            label = { Text("Mobile Number") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-
-                                val cleanPhone = phone.filter {
-                                    it.isDigit()
-                                }
-
-                                when {
-                                    name.isBlank() ->
-                                        message = "Please enter contact name"
-
-                                    cleanPhone.length !in 10..15 ->
-                                        message = "Enter a valid mobile number"
-
-                                    contacts.anyIndexed { index, contact ->
-                                        contact.phone == phone.trim() &&
-                                            index != editingIndex
-                                    } ->
-                                        message = "This number already exists"
-
-                                    else -> {
-                                        val contact = Contact(
-                                            name.trim(),
-                                            phone.trim()
-                                        )
-
-                                        if (editingIndex == -1) {
-                                            contacts.add(contact)
-                                            message = "Contact saved successfully"
-                                        } else {
-                                            contacts[editingIndex] = contact
-                                            message = "Contact updated successfully"
-                                        }
-
-                                        saveContacts()
-                                        name = ""
-                                        phone = ""
-                                        editingIndex = -1
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                if (editingIndex == -1) {
-                                    "SAVE CONTACT"
-                                } else {
-                                    "UPDATE CONTACT"
-                                }
-                            )
-                        }
-
-                        Text(
-                            message,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text(
-                            "Saved Contacts (${contacts.size})",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
 
-                        contacts.forEachIndexed { index, contact ->
+                        Spacer(Modifier.height(16.dp))
 
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp)
-                                ) {
-                                    Text(
-                                        contact.name,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Text(contact.phone)
-
-                                    Row(
-                                        horizontalArrangement =
-                                            Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                name = contact.name
-                                                phone = contact.phone
-                                                editingIndex = index
-                                                message = "Editing contact"
-                                            }
-                                        ) {
-                                            Text("EDIT")
-                                        }
-
-                                        OutlinedButton(
-                                            onClick = {
-                                                contacts.removeAt(index)
-                                                saveContacts()
-
-                                                if (editingIndex == index) {
-                                                    name = ""
-                                                    phone = ""
-                                                    editingIndex = -1
-                                                }
-
-                                                message = "Contact deleted"
-                                            }
-                                        ) {
-                                            Text("DELETE")
-                                        }
-                                    }
-                                }
-                            }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DashboardCard("Contacts", contacts.size.toString(), Modifier.weight(1f))
+                            DashboardCard("Templates", templates.size.toString(), Modifier.weight(1f))
                         }
-                    }
 
-                    else -> {
+                        Spacer(Modifier.height(10.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DashboardCard("Sent Today", "0", Modifier.weight(1f))
+                            DashboardCard("Pending", "0", Modifier.weight(1f))
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
                         Text(
-                            "$selectedTab feature coming soon",
-                            style = MaterialTheme.typography.titleLarge
+                            "Automation Controls",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-                }
-            }
-        }
-    }
-}
 
-fun <T> List<T>.anyIndexed(
-    predicate: (Int, T) -> Boolean
-): Boolean {
-    return indices.any { predicate(it, this[it]) }
-}
+                        Spacer(Modifier.height(12.dp))
 
-@Composable
-fun DashboardCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.height(105.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
+                        Button(
+                            onClick = { notice = "SMS automation is not enabled yet." },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("START") }
 
-            Text(title)
-        }
-    }
-}
+                        OutlinedButton(
+                            onClick = { notice = "No active automation to pause." },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("PAUSE") }
+
+                        OutlinedButton(
+                            onClick = { notice = "No paused automation to resume." },
+                            modifier =
