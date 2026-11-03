@@ -237,3 +237,29 @@ Text("Next Scheduled Message", fontWeight = FontWeight.Bold)
 Text("No schedule configured")
 
 Text(notice, color = MaterialTheme.colorScheme.primary)
+@Composable
+fun DashboardCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(105.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(text = title)
+        }
+    }
+}
