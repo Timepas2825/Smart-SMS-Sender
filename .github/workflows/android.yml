@@ -1,10 +1,14 @@
-name: Build Smart SMS Manager
+
+name: Android Build
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +18,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set Up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,29 +26,20 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
 
-      - name: Configure Android SDK
+      - name: Debug Android Manifest
         run: |
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
-          echo "SDKMANAGER=$SDKMANAGER" >> $GITHUB_ENV
-          echo "$(dirname "$SDKMANAGER")" >> $GITHUB_PATH
+          echo "Checking manifest file..."
+          ls -la app/src/main/
+          cat -A app/src/main/AndroidManifest.xml
+          python3 -c "import xml.etree.ElementTree as ET; ET.parse('app/src/main/AndroidManifest.xml'); print('XML VALID')"
 
-      - name: Accept Android Licenses
-        run: yes | "$SDKMANAGER" --licenses
+      - name: Build Debug APK
+        run: gradle assembleDebug --stacktrace --info
 
-      - name: Install Android SDK
-        run: |
-          "$SDKMANAGER" "platforms;android-35"
-          "$SDKMANAGER" "build-tools;35.0.0"
-
-      - name: Build APK
-        run: gradle assembleDebug
-
-      - name: Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: Smart-SMS-Manager-APK
           path: app/build/outputs/apk/debug/app-debug.apk
